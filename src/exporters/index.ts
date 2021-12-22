@@ -72,11 +72,10 @@ function getDefaultValue(
     config.keyAsDefaultValue === true ||
     (Array.isArray(config.keyAsDefaultValue) &&
       config.keyAsDefaultValue.includes(locale));
-  const keyAsDefaultValueForDerivedKeys =
-    config.keyAsDefaultValueForDerivedKeys;
+
   if (
     keyAsDefaultValueEnabled &&
-    (keyAsDefaultValueForDerivedKeys || !key.isDerivedKey)
+    (config.keyAsDefaultValueForDerivedKeys || !key.isDerivedKey)
   ) {
     defaultValue = key.cleanKey;
   }
@@ -152,6 +151,7 @@ export default function exportTranslationKeys(
         keyPath: k.keyPath,
         cleanKey: k.cleanKey,
       });
+
       translationFile = exporter.addKey({
         config,
         file: translationFile,

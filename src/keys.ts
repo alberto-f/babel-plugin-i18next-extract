@@ -3,6 +3,8 @@ import i18next from 'i18next';
 
 import { Config } from './config';
 
+const PLURAL_SUFFIXES = ['one', 'other'];
+
 interface I18NextParsedOptions {
   // If contexts is an array, it's an explicit list of context.
   // If contexts is true, default context should be used.
@@ -95,24 +97,20 @@ export function computeDerivedKeys(
   config: Config,
 ): TranslationKey[] {
   const translationKey = parseExtractedKey(extractedKey, config);
-  const { parsedOptions, cleanKey: key } = translationKey;
+  const { parsedOptions, cleanKey: originalCleanKey } = translationKey;
   let keys = [translationKey];
 
   if (parsedOptions.contexts !== false) {
-    // Add all context suffixes
-    // For instance, if key is "foo", may want
-    // ["foo", "foo_male", "foo_female"] depending on defaultContexts value.
-    const contexts = Array.isArray(parsedOptions.contexts)
+    const contextsOrDefaultContext = Array.isArray(parsedOptions.contexts)
       ? parsedOptions.contexts
       : config.defaultContexts;
-    keys = contexts.map((v) => {
-      if (v === '') return translationKey;
-      return {
-        ...translationKey,
-        cleanKey: key + config.contextSeparator + v,
-        isDerivedKey: true,
-      };
-    });
+
+    keys = updateTranslationKeyWithContext(
+      translationKey,
+      originalCleanKey,
+      config.contextSeparator,
+      contextsOrDefaultContext,
+    );
   }
 
   if (parsedOptions.hasCount) {
@@ -121,7 +119,6 @@ export function computeDerivedKeys(
     if (pluralRule === undefined) {
       throw new Error(`Locale '${locale}' does not exist.`);
     }
-    const numberOfPlurals = pluralRule.numbers.length;
 
     if (config.enableExperimentalIcu) {
       const pluralNumbersAsText = Array.from<string>(
@@ -139,44 +136,51 @@ export function computeDerivedKeys(
 
       extractedKey.parsedOptions.defaultValue = `{count, plural, ${icuPlurals}}`;
     } else {
-      if (numberOfPlurals === 1) {
-        keys = keys.map((k) => ({
-          ...k,
-          cleanKey: k.cleanKey + config.pluralSeparator + '0',
-          isDerivedKey: true,
-        }));
-      } else if (numberOfPlurals === 2) {
-        keys = keys.reduce(
-          (accumulator, k) => [
-            ...accumulator,
-            k,
-            {
-              ...k,
-              cleanKey: k.cleanKey + config.pluralSeparator + 'plural',
-              isDerivedKey: true,
-            },
-          ],
-          Array<TranslationKey>(),
+      keys = keys.reduce((translationKeys: TranslationKey[], key) => {
+        const translationKeyWithPlurals = updateTranslationKeyWithPlurals(
+          key,
+          config.pluralSeparator,
+          PLURAL_SUFFIXES,
         );
-      } else {
-        keys = keys.reduce(
-          (accumulator, k) => [
-            ...accumulator,
-            ...Array(numberOfPlurals)
-              .fill(null)
-              .map((_, idx) => ({
-                ...k,
-                cleanKey: k.cleanKey + config.pluralSeparator + idx,
-                isDerivedKey: true,
-              })),
-          ],
-          Array<TranslationKey>(),
-        );
-      }
+        return translationKeys.concat(translationKeyWithPlurals);
+      }, []);
     }
   }
 
   return keys;
+}
+
+/**
+ * Add context suffices to a translation key
+ *
+ * if key is "foo", may want ["foo", "foo_male", "foo_female"] depending on defaultContexts value.
+ */
+function updateTranslationKeyWithContext(
+  translationKey: TranslationKey,
+  key: string,
+  contextSeparator: string,
+  contextsOrDefaultContext: string[],
+): TranslationKey[] {
+  return contextsOrDefaultContext.map((contextValue) => {
+    if (contextValue === '') return translationKey;
+    return {
+      ...translationKey,
+      cleanKey: key + contextSeparator + contextValue,
+      isDerivedKey: true,
+    };
+  });
+}
+
+function updateTranslationKeyWithPlurals(
+  translationKey: TranslationKey,
+  pluralSeparator: string,
+  pluralSuffixes: string[],
+): TranslationKey[] {
+  return pluralSuffixes.map((pluralSuffix) => ({
+    ...translationKey,
+    cleanKey: translationKey.cleanKey + pluralSeparator + pluralSuffix,
+    isDerivedKey: true,
+  }));
 }
 
 function pluralNumberToText(number: number): string {
