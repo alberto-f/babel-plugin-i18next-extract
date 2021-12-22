@@ -2,11 +2,11 @@ import { withTranslation } from 'react-i18next';
 import * as ReactI18Next from 'react-i18next';
 
 function MyComponent0(props) {
-  return <p>{props.t('key0')}</p>
+  return <p>{props.t('key0', {count: 2})}</p>
 }
 
 function MyComponent1({t, i18n}) {
-  return <p>{t('key1')}</p>
+  return <p>{t('key1', {count: 2})}</p>
 }
 
 const MyComponent2 = ({t, i18n}) => {

@@ -2,8 +2,10 @@
   "description": "test simple extractions of the withTranslation HOC on function components",
   "pluginOptions": {},
   "expectValues": {
-    "key0": "",
-    "key1": "",
+    "key0_one": "",
+    "key0_other": "",
+    "key1_one": "",
+    "key1_other": "",
     "key2": "",
     "key3": ""
   }
